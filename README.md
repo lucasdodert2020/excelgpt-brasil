@@ -120,7 +120,7 @@ Rotas iniciais disponíveis:
 
 - `/login`: entrada com Google OAuth.
 - `/dashboard`: área protegida com dados básicos da conta.
-- `/chat`: estrutura inicial protegida do chat, ainda sem OpenAI, com resposta fake e limite diário de 10 perguntas para o plano grátis.
+- `/chat`: chat protegido com OpenAI, cache em banco e limite diário de 10 perguntas para o plano grátis.
 
 ### Qualidade
 

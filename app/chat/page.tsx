@@ -69,8 +69,7 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
           </p>
           <h1 className="mt-3 text-3xl font-bold tracking-normal text-slate-950">Chat</h1>
           <p className="mt-3 text-sm leading-6 text-slate-600">
-            Envie uma pergunta para criar uma conversa de teste. A integração com IA ainda não está
-            ativa.
+            Envie uma pergunta para receber uma resposta especializada em Excel.
           </p>
 
           {params.error === "limit" ? (
@@ -82,6 +81,13 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
           {params.error === "invalid" ? (
             <div className="mt-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-900">
               Preencha a pergunta, o modo e a versão do Excel corretamente.
+            </div>
+          ) : null}
+
+          {params.error === "openai_config" ? (
+            <div className="mt-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-900">
+              A chave da OpenAI ainda não foi configurada. Defina OPENAI_API_KEY para ativar as
+              respostas com IA.
             </div>
           ) : null}
 
@@ -170,7 +176,7 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
                   Nenhuma conversa selecionada
                 </h2>
                 <p className="mt-3 max-w-md text-sm leading-6 text-slate-600">
-                  Envie a primeira pergunta para salvar uma conversa com resposta temporária.
+                  Envie a primeira pergunta para salvar uma conversa com resposta da IA.
                 </p>
               </div>
             </div>
@@ -180,4 +186,3 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
     </main>
   );
 }
-

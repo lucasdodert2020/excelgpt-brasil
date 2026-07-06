@@ -5,12 +5,12 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { generateExcelAnswer, MissingOpenAiKeyError } from "@/services/ai/excel-assistant";
 
 const DAILY_FREE_LIMIT = 10;
 const CHAT_USAGE_ACTION = "CHAT_QUESTION_SUBMITTED";
 const CHAT_LIMIT_ACTION = "CHAT_DAILY_LIMIT_EXCEEDED";
-const FAKE_ASSISTANT_RESPONSE =
-  "Resposta de teste. Integração com IA será adicionada na próxima etapa.";
+const CHAT_OPENAI_CONFIG_ERROR_ACTION = "CHAT_OPENAI_CONFIG_ERROR";
 
 const chatSchema = z.object({
   question: z.string().trim().min(1).max(4000),
@@ -80,6 +80,30 @@ export async function submitChatQuestion(formData: FormData) {
   }
 
   const { question, mode, excelVersion } = parsed.data;
+  let aiAnswer;
+
+  try {
+    aiAnswer = await generateExcelAnswer({
+      question,
+      mode,
+      excelVersion,
+    });
+  } catch (error) {
+    if (error instanceof MissingOpenAiKeyError) {
+      await prisma.usageLog.create({
+        data: {
+          userId: user.id,
+          action: CHAT_OPENAI_CONFIG_ERROR_ACTION,
+          tokensUsed: 0,
+          costInCents: 0,
+        },
+      });
+
+      redirect("/chat?error=openai_config");
+    }
+
+    throw error;
+  }
 
   const conversation = await prisma.conversation.create({
     data: {
@@ -98,10 +122,11 @@ export async function submitChatQuestion(formData: FormData) {
           },
           {
             role: MessageRole.ASSISTANT,
-            content: FAKE_ASSISTANT_RESPONSE,
+            content: aiAnswer.answer,
             metadata: {
-              source: "fake_response",
-              openAiCalled: false,
+              source: aiAnswer.source,
+              model: aiAnswer.model,
+              openAiCalled: aiAnswer.openAiCalled,
             },
           },
         ],
@@ -113,11 +138,10 @@ export async function submitChatQuestion(formData: FormData) {
     data: {
       userId: user.id,
       action: CHAT_USAGE_ACTION,
-      tokensUsed: 0,
-      costInCents: 0,
+      tokensUsed: aiAnswer.tokensUsed ?? 0,
+      costInCents: aiAnswer.costInCents ?? 0,
     },
   });
 
   redirect(`/chat?conversationId=${conversation.id}`);
 }
-
