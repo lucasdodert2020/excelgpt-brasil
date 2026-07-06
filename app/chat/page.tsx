@@ -1,33 +1,8 @@
-import { ConversationMode, ExcelVersion, MessageRole } from "@prisma/client";
 import { redirect } from "next/navigation";
-import { submitChatQuestion } from "@/app/chat/actions";
+import { ChatForm } from "@/components/chat/chat-form";
+import { ChatMessage } from "@/components/chat/chat-message";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-
-const modes = [
-  { value: ConversationMode.FORMULA, label: "Fórmula" },
-  { value: ConversationMode.EXPLAIN, label: "Explicar" },
-  { value: ConversationMode.FIX, label: "Corrigir" },
-  { value: ConversationMode.CONVERT, label: "Converter" },
-  { value: ConversationMode.VBA, label: "VBA" },
-  { value: ConversationMode.POWER_QUERY, label: "Power Query" },
-  { value: ConversationMode.OFFICE_SCRIPT, label: "Office Script" },
-];
-
-const excelVersions = [
-  { value: ExcelVersion.EXCEL_2013, label: "Excel 2013" },
-  { value: ExcelVersion.EXCEL_2016, label: "Excel 2016" },
-  { value: ExcelVersion.EXCEL_2019, label: "Excel 2019" },
-  { value: ExcelVersion.EXCEL_2021, label: "Excel 2021" },
-  { value: ExcelVersion.EXCEL_365, label: "Excel 365" },
-  { value: ExcelVersion.GOOGLE_SHEETS, label: "Google Sheets" },
-];
-
-const roleLabels: Record<MessageRole, string> = {
-  USER: "Você",
-  ASSISTANT: "ExcelGPT Brasil",
-  SYSTEM: "Sistema",
-};
 
 type ChatPageProps = {
   searchParams: Promise<{
@@ -61,8 +36,8 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
     : null;
 
   return (
-    <main className="min-h-screen bg-slate-50 px-6 py-10">
-      <section className="mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-[380px_1fr]">
+    <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 sm:py-10">
+      <section className="mx-auto grid w-full max-w-6xl gap-6 lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-8">
         <aside className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
           <p className="text-sm font-semibold uppercase tracking-wide text-brand-700">
             ExcelGPT Brasil
@@ -91,65 +66,21 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
             </div>
           ) : null}
 
-          <form action={submitChatQuestion} className="mt-8 grid gap-5">
-            <label className="grid gap-2">
-              <span className="text-sm font-semibold text-slate-800">Pergunta</span>
-              <textarea
-                name="question"
-                required
-                rows={6}
-                maxLength={4000}
-                className="resize-none rounded-md border border-slate-300 px-3 py-2 text-sm leading-6 text-slate-950 shadow-sm outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-100"
-                placeholder="Ex: Preciso somar vendas por mês usando uma coluna de datas."
-              />
-            </label>
-
-            <label className="grid gap-2">
-              <span className="text-sm font-semibold text-slate-800">Modo</span>
-              <select
-                name="mode"
-                defaultValue={ConversationMode.FORMULA}
-                className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-950 shadow-sm outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-100"
-              >
-                {modes.map((mode) => (
-                  <option key={mode.value} value={mode.value}>
-                    {mode.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="grid gap-2">
-              <span className="text-sm font-semibold text-slate-800">Versão do Excel</span>
-              <select
-                name="excelVersion"
-                defaultValue={ExcelVersion.EXCEL_365}
-                className="rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-950 shadow-sm outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-100"
-              >
-                {excelVersions.map((version) => (
-                  <option key={version.value} value={version.value}>
-                    {version.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <button
-              type="submit"
-              className="rounded-md bg-brand-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
-            >
-              Enviar pergunta
-            </button>
-          </form>
+          <ChatForm />
         </aside>
 
-        <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="min-w-0 rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
           {conversation ? (
             <>
-              <div className="border-b border-slate-200 pb-5">
-                <p className="text-sm font-medium text-slate-500">
-                  {conversation.mode} · {conversation.excelVersion}
-                </p>
+              <div className="flex flex-col gap-3 border-b border-slate-200 pb-5">
+                <div className="flex flex-wrap gap-2">
+                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
+                    {conversation.mode}
+                  </span>
+                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
+                    {conversation.excelVersion}
+                  </span>
+                </div>
                 <h2 className="mt-2 text-2xl font-bold tracking-normal text-slate-950">
                   {conversation.title}
                 </h2>
@@ -157,15 +88,12 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
 
               <div className="mt-6 grid gap-4">
                 {conversation.messages.map((message) => (
-                  <article
+                  <ChatMessage
                     key={message.id}
-                    className="rounded-md border border-slate-200 bg-slate-50 p-4"
-                  >
-                    <p className="text-sm font-semibold text-brand-700">{roleLabels[message.role]}</p>
-                    <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-800">
-                      {message.content}
-                    </p>
-                  </article>
+                    role={message.role}
+                    content={message.content}
+                    metadata={message.metadata}
+                  />
                 ))}
               </div>
             </>
