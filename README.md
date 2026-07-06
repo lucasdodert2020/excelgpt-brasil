@@ -64,6 +64,20 @@ Exemplo de `DATABASE_URL` para o PostgreSQL do Docker Compose:
 DATABASE_URL="postgresql://excelgpt:excelgpt@localhost:5432/excelgpt_brasil?schema=public"
 ```
 
+Para autenticação com Google OAuth, configure também:
+
+```env
+AUTH_SECRET="gere-um-segredo-local"
+GOOGLE_CLIENT_ID="seu-client-id-google"
+GOOGLE_CLIENT_SECRET="seu-client-secret-google"
+```
+
+No console do Google, use a URL de callback local:
+
+```text
+http://localhost:3000/api/auth/callback/google
+```
+
 Nunca commite o arquivo `.env`.
 
 ### Banco de Dados Local
