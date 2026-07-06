@@ -80,7 +80,13 @@ Gere o Prisma Client:
 npm run prisma:generate
 ```
 
-Quando houver migrações, use:
+Valide o schema Prisma:
+
+```bash
+npm run prisma:validate
+```
+
+Crie/aplique migrações em desenvolvimento:
 
 ```bash
 npm run prisma:migrate

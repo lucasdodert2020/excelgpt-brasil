@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-Definir o modelo inicial para suportar usuários, planos, histórico, uso de IA, cache e monetização.
+Definir o modelo inicial do MVP para suportar usuários, autenticação futura com Auth.js, histórico de conversas, mensagens, cache de IA, logs de uso e favoritos.
 
 ## Tecnologia Prevista
 
@@ -22,44 +22,67 @@ Campos previstos:
 - `email`
 - `emailVerified`
 - `image`
+- `role`: `USER` ou `ADMIN`
+- `plan`: `FREE`, `PRO` ou `BUSINESS`
 - `createdAt`
 - `updatedAt`
 
-### Account e Session
+Relacionamentos:
 
-Entidades esperadas pelo Auth.js para autenticação.
+- `accounts`
+- `sessions`
+- `conversations`
+- `usageLogs`
+- `favorites`
 
-### Plan
+Índices:
 
-Representa o plano disponível.
-
-Campos previstos:
-
-- `id`
-- `name`
-- `slug`
-- `monthlyLimit`
-- `features`
-- `price`
+- `role`
+- `plan`
 - `createdAt`
 
-### Subscription
+### Account
 
-Representa assinatura ativa ou passada.
+Entidade compatível com Auth.js para provedores externos de autenticação.
 
-Campos previstos:
+Campos principais:
 
-- `id`
 - `userId`
-- `planId`
+- `type`
 - `provider`
-- `providerCustomerId`
-- `providerSubscriptionId`
-- `status`
-- `currentPeriodStart`
-- `currentPeriodEnd`
-- `createdAt`
-- `updatedAt`
+- `providerAccountId`
+- `refresh_token`
+- `access_token`
+- `expires_at`
+- `token_type`
+- `scope`
+- `id_token`
+- `session_state`
+
+Regras:
+
+- `provider` + `providerAccountId` devem ser únicos.
+- Ao excluir usuário, contas vinculadas são removidas em cascata.
+
+### Session
+
+Entidade compatível com Auth.js para sessões persistidas.
+
+Campos principais:
+
+- `sessionToken`
+- `userId`
+- `expires`
+
+### VerificationToken
+
+Entidade compatível com Auth.js para fluxos de verificação.
+
+Campos principais:
+
+- `identifier`
+- `token`
+- `expires`
 
 ### Conversation
 
@@ -70,9 +93,17 @@ Campos previstos:
 - `id`
 - `userId`
 - `title`
+- `mode`: `FORMULA`, `EXPLAIN`, `FIX`, `CONVERT`, `VBA`, `POWER_QUERY` ou `OFFICE_SCRIPT`
 - `excelVersion`
 - `createdAt`
 - `updatedAt`
+
+Índices:
+
+- `userId`
+- `userId` + `updatedAt`
+- `mode`
+- `excelVersion`
 
 ### Message
 
@@ -84,61 +115,75 @@ Campos previstos:
 - `conversationId`
 - `role`
 - `content`
-- `taskType`
-- `excelVersion`
+- `metadata`
 - `createdAt`
 
-### AiUsage
+Índices:
 
-Registra uso de IA e custos estimados.
+- `conversationId`
+- `conversationId` + `createdAt`
+- `role`
 
-Campos previstos:
+### AiCache
 
-- `id`
-- `userId`
-- `messageId`
-- `model`
-- `inputTokens`
-- `outputTokens`
-- `estimatedCost`
-- `createdAt`
-
-### KnowledgeBaseEntry
-
-Base de conhecimento para dúvidas recorrentes.
-
-Campos previstos:
-
-- `id`
-- `slug`
-- `title`
-- `question`
-- `answer`
-- `excelVersion`
-- `tags`
-- `isPublic`
-- `createdAt`
-- `updatedAt`
-
-### CachedAnswer
-
-Cache de respostas reutilizáveis.
+Cache de respostas reutilizáveis para reduzir chamadas à IA.
 
 Campos previstos:
 
 - `id`
 - `cacheKey`
 - `questionHash`
-- `taskType`
-- `excelVersion`
 - `answer`
-- `hits`
+- `mode`
+- `excelVersion`
+- `hitCount`
 - `createdAt`
 - `updatedAt`
+
+Índices:
+
+- `questionHash`
+- `mode`
+- `excelVersion`
+- `mode` + `excelVersion`
+- `updatedAt`
+
+### UsageLog
+
+Registra eventos de uso e custo estimado.
+
+Campos previstos:
+
+- `id`
+- `userId`
+- `action`
+- `tokensUsed`
+- `costInCents`
+- `createdAt`
+
+Observações:
+
+- `userId` é opcional para permitir logs de eventos anônimos ou pré-login.
+- `tokensUsed` e `costInCents` são opcionais porque nem toda ação consome IA.
+
+### Favorite
+
+Permite que o usuário favorite mensagens úteis.
+
+Campos previstos:
+
+- `id`
+- `userId`
+- `messageId`
+- `createdAt`
+
+Regras:
+
+- Um usuário não pode favoritar a mesma mensagem mais de uma vez.
 
 ## Observações
 
 - O histórico deve ser útil para o usuário, mas não deve armazenar dados sensíveis desnecessários.
-- Cache deve considerar tipo de tarefa e versão do Excel.
-- A base de conhecimento poderá alimentar páginas públicas de SEO futuramente.
-
+- Cache deve considerar modo de uso e versão do Excel.
+- O modelo de assinatura detalhado ainda não foi implementado; no MVP inicial, o plano fica no enum `UserPlan`.
+- Login, chat e chamadas à OpenAI ainda não estão implementados nesta fase.

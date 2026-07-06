@@ -7,6 +7,27 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum UserPlan {
+  FREE
+  PRO
+  BUSINESS
+}
+
+enum ConversationMode {
+  FORMULA
+  EXPLAIN
+  FIX
+  CONVERT
+  VBA
+  POWER_QUERY
+  OFFICE_SCRIPT
+}
+
 enum ExcelVersion {
   EXCEL_2013
   EXCEL_2016
@@ -16,30 +37,10 @@ enum ExcelVersion {
   GOOGLE_SHEETS
 }
 
-enum TaskType {
-  QUESTION
-  GENERATE_FORMULA
-  FIX_FORMULA
-  EXPLAIN_FORMULA
-}
-
 enum MessageRole {
   USER
   ASSISTANT
   SYSTEM
-}
-
-enum SubscriptionProvider {
-  MERCADO_PAGO
-  STRIPE
-}
-
-enum SubscriptionStatus {
-  ACTIVE
-  CANCELED
-  PAST_DUE
-  INCOMPLETE
-  TRIALING
 }
 
 model User {
@@ -48,13 +49,19 @@ model User {
   email         String?        @unique
   emailVerified DateTime?
   image         String?
+  role          UserRole       @default(USER)
+  plan          UserPlan       @default(FREE)
   accounts      Account[]
   sessions      Session[]
   conversations Conversation[]
-  aiUsages      AiUsage[]
-  subscriptions Subscription[]
+  usageLogs     UsageLog[]
+  favorites     Favorite[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
+
+  @@index([role])
+  @@index([plan])
+  @@index([createdAt])
 }
 
 model Account {
@@ -73,6 +80,7 @@ model Account {
   user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
+  @@index([userId])
 }
 
 model Session {
@@ -81,6 +89,9 @@ model Session {
   userId       String
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expires])
 }
 
 model VerificationToken {
@@ -89,44 +100,24 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
-}
-
-model Plan {
-  id            String         @id @default(cuid())
-  name          String
-  slug          String         @unique
-  monthlyLimit  Int
-  features      Json
-  price         Decimal        @db.Decimal(10, 2)
-  subscriptions Subscription[]
-  createdAt     DateTime       @default(now())
-}
-
-model Subscription {
-  id                     String               @id @default(cuid())
-  userId                 String
-  planId                 String
-  provider               SubscriptionProvider
-  providerCustomerId     String?
-  providerSubscriptionId String?
-  status                 SubscriptionStatus
-  currentPeriodStart     DateTime?
-  currentPeriodEnd       DateTime?
-  user                   User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  plan                   Plan                 @relation(fields: [planId], references: [id])
-  createdAt              DateTime             @default(now())
-  updatedAt              DateTime             @updatedAt
+  @@index([expires])
 }
 
 model Conversation {
-  id           String       @id @default(cuid())
+  id           String           @id @default(cuid())
   userId       String
   title        String?
+  mode         ConversationMode
   excelVersion ExcelVersion
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages     Message[]
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([userId])
+  @@index([userId, updatedAt])
+  @@index([mode])
+  @@index([excelVersion])
 }
 
 model Message {
@@ -134,48 +125,59 @@ model Message {
   conversationId String
   role           MessageRole
   content        String
-  taskType       TaskType?
-  excelVersion   ExcelVersion?
+  metadata       Json?
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  aiUsage        AiUsage?
+  favorites      Favorite[]
   createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
+  @@index([conversationId, createdAt])
+  @@index([role])
 }
 
-model AiUsage {
-  id            String   @id @default(cuid())
-  userId        String
-  messageId     String?  @unique
-  model         String
-  inputTokens   Int
-  outputTokens  Int
-  estimatedCost Decimal? @db.Decimal(10, 6)
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  message       Message? @relation(fields: [messageId], references: [id], onDelete: SetNull)
-  createdAt     DateTime @default(now())
-}
-
-model KnowledgeBaseEntry {
-  id           String        @id @default(cuid())
-  slug         String        @unique
-  title        String
-  question     String
-  answer       String
-  excelVersion ExcelVersion?
-  tags         String[]
-  isPublic     Boolean       @default(false)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-}
-
-model CachedAnswer {
-  id           String        @id @default(cuid())
-  cacheKey     String        @unique
+model AiCache {
+  id           String           @id @default(cuid())
+  cacheKey     String           @unique
   questionHash String
-  taskType     TaskType
-  excelVersion ExcelVersion?
   answer       String
-  hits         Int           @default(0)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  mode         ConversationMode
+  excelVersion ExcelVersion
+  hitCount     Int              @default(0)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([questionHash])
+  @@index([mode])
+  @@index([excelVersion])
+  @@index([mode, excelVersion])
+  @@index([updatedAt])
+}
+
+model UsageLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  action      String
+  tokensUsed  Int?
+  costInCents Int?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  messageId String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, messageId])
+  @@index([userId])
+  @@index([messageId])
+  @@index([createdAt])
 }
 
