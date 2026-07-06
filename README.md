@@ -40,6 +40,76 @@ O MVP terá:
 - Pagamentos: Mercado Pago e Stripe.
 - Deploy: Vercel.
 
+## Setup Local
+
+### Requisitos
+
+- Node.js 20 ou superior.
+- npm.
+- Docker Desktop ou Docker Compose compatível.
+
+### Instalação
+
+```bash
+npm install
+```
+
+### Variáveis de Ambiente
+
+Copie `.env.example` para `.env` e preencha os valores locais.
+
+Exemplo de `DATABASE_URL` para o PostgreSQL do Docker Compose:
+
+```env
+DATABASE_URL="postgresql://excelgpt:excelgpt@localhost:5432/excelgpt_brasil?schema=public"
+```
+
+Nunca commite o arquivo `.env`.
+
+### Banco de Dados Local
+
+Suba o PostgreSQL local:
+
+```bash
+docker compose up -d
+```
+
+Gere o Prisma Client:
+
+```bash
+npm run prisma:generate
+```
+
+Quando houver migrações, use:
+
+```bash
+npm run prisma:migrate
+```
+
+### Desenvolvimento
+
+Rode o servidor local:
+
+```bash
+npm run dev
+```
+
+Acesse `http://localhost:3000`.
+
+### Qualidade
+
+Execute o lint:
+
+```bash
+npm run lint
+```
+
+Formate os arquivos:
+
+```bash
+npm run format
+```
+
 ## Roadmap Resumido
 
 1. Fundação documental e decisões iniciais.
@@ -70,4 +140,3 @@ A documentação inicial está em `docs/`:
 - `12-seo.md`: estratégia de SEO.
 - `13-deployment.md`: deploy e ambientes.
 - `14-security.md`: segurança e privacidade.
-
